@@ -1,0 +1,38 @@
+using UnityEngine;
+
+public class CameraController : MonoBehaviour
+{
+    [SerializeField] private float panSpeed = 20f;
+    [SerializeField] private float zoomSpeed = 5f;
+    [SerializeField] private float rotationSpeed = 100f;
+
+    [SerializeField] private float minZoom = 5f;
+    [SerializeField] private float maxZoom = 20f;
+
+    private Vector3 lastMousePosition;
+
+    void Update()
+    {
+        // Pan with middle mouse button
+        if (Input.GetMouseButton(2))
+        {
+            Vector3 delta = Input.mousePosition - lastMousePosition;
+            transform.Translate(-delta.x * panSpeed * Time.deltaTime, -delta.y * panSpeed * Time.deltaTime, 0);
+        }
+
+        // Zoom with scroll wheel
+        float scroll = Input.GetAxis("Mouse ScrollWheel");
+        Vector3 pos = transform.position;
+        pos.y = Mathf.Clamp(pos.y - scroll * zoomSpeed, minZoom, maxZoom);
+        transform.position = pos;
+
+        // Rotate with right mouse button
+        if (Input.GetMouseButton(1))
+        {
+            Vector3 delta = Input.mousePosition - lastMousePosition;
+            transform.RotateAround(Vector3.zero, Vector3.up, delta.x * rotationSpeed * Time.deltaTime);
+        }
+
+        lastMousePosition = Input.mousePosition;
+    }
+}

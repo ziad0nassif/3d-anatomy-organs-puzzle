@@ -1,0 +1,198 @@
+using UnityEngine;
+
+public class OrganPart : MonoBehaviour
+{
+    [Header("Part Configuration")]
+    [Tooltip("Unique index for this organ part (0-5)")]
+    [Range(0, 5)]
+    [SerializeField] private int partIndex;
+
+    [Header("Movement Settings")]
+    [SerializeField] private float keyboardRotationSpeed = 100f;
+    [SerializeField] private float snapSpeed = 10f;
+    [SerializeField] private float snapRadius = 1f;  // Radius for the trigger collider
+
+    [Header("Visual Feedback")]
+    [SerializeField] private Color highlightColor = new Color(1f, 0.8f, 0.8f, 1f);
+    [SerializeField] private Color selectedColor = new Color(1f, 1f, 0f, 1f);
+    [SerializeField] private Color correctPositionColor = new Color(0f, 1f, 0f, 1f);
+
+    private Vector3 originalPosition;
+    private Quaternion originalRotation;
+    private bool isDragging = false;
+    private bool isSelected = false;
+    private bool isSnapped = false;
+    private float mouseZCoord;
+    private Material originalMaterial;
+    private MeshRenderer meshRenderer;
+    private SphereCollider triggerCollider;
+
+    private void Start()
+    {
+        originalPosition = transform.position;
+        originalRotation = transform.rotation;
+        meshRenderer = GetComponent<MeshRenderer>();
+        if (meshRenderer != null)
+        {
+            originalMaterial = meshRenderer.material;
+        }
+
+        // Add trigger collider for snap detection
+        triggerCollider = gameObject.AddComponent<SphereCollider>();
+        triggerCollider.radius = snapRadius;
+        triggerCollider.isTrigger = true;
+
+        RandomizeTransform();
+    }
+
+    private void Update()
+    {
+        if (!isSnapped && isSelected)
+        {
+            HandleKeyboardRotation();
+        }
+    }
+
+    private void HandleKeyboardRotation()
+    {
+        float rotationAmount = keyboardRotationSpeed * Time.deltaTime;
+
+        // X-axis rotation (A/D)
+        if (Input.GetKey(KeyCode.A))
+            transform.Rotate(Vector3.right * rotationAmount, Space.World);
+        if (Input.GetKey(KeyCode.D))
+            transform.Rotate(Vector3.right * -rotationAmount, Space.World);
+
+        // Y-axis rotation (W/S)
+        if (Input.GetKey(KeyCode.W))
+            transform.Rotate(Vector3.up * rotationAmount, Space.World);
+        if (Input.GetKey(KeyCode.S))
+            transform.Rotate(Vector3.up * -rotationAmount, Space.World);
+
+        // Z-axis rotation (Q/E)
+        if (Input.GetKey(KeyCode.Q))
+            transform.Rotate(Vector3.forward * rotationAmount, Space.World);
+        if (Input.GetKey(KeyCode.E))
+            transform.Rotate(Vector3.forward * -rotationAmount, Space.World);
+    }
+
+    private void OnTriggerStay(Collider other)
+    {
+        if (isSnapped || !isDragging) return;
+
+        OrganPart otherPart = other.GetComponent<OrganPart>();
+        if (otherPart != null && otherPart.IsInCorrectPosition())
+        {
+            // If we're close to a correctly placed part, check if we're also close to our correct position
+            float distanceToCorrect = Vector3.Distance(transform.position, originalPosition);
+            float angleToCorrect = Quaternion.Angle(transform.rotation, originalRotation);
+
+            if (distanceToCorrect < snapRadius * 2 && angleToCorrect < 45f)
+            {
+                StartCoroutine(SmoothSnap());
+            }
+        }
+    }
+
+    private void OnMouseDown()
+    {
+        if (isSnapped) return;
+
+        if (!isSelected)
+        {
+            // Deselect all other parts first
+            OrganPart[] allParts = FindObjectsOfType<OrganPart>();
+            foreach (OrganPart part in allParts)
+            {
+                part.Deselect();
+            }
+
+            Select();
+        }
+
+        isDragging = true;
+        mouseZCoord = Camera.main.WorldToScreenPoint(transform.position).z;
+    }
+
+    private void OnMouseDrag()
+    {
+        if (isSnapped) return;
+
+        Vector3 screenPosition = new Vector3(Input.mousePosition.x, Input.mousePosition.y, mouseZCoord);
+        Vector3 newWorldPosition = Camera.main.ScreenToWorldPoint(screenPosition);
+        transform.position = newWorldPosition;
+    }
+
+    private void OnMouseUp()
+    {
+        isDragging = false;
+    }
+
+    public void Select()
+    {
+        isSelected = true;
+        meshRenderer.material.color = selectedColor;
+    }
+
+    public void Deselect()
+    {
+        isSelected = false;
+        if (!isSnapped)
+        {
+            meshRenderer.material.color = Color.white;
+        }
+    }
+
+    private System.Collections.IEnumerator SmoothSnap()
+    {
+        isSnapped = true;
+        isSelected = false;
+        float elapsedTime = 0f;
+        Vector3 startPosition = transform.position;
+        Quaternion startRotation = transform.rotation;
+
+        while (elapsedTime < 1f)
+        {
+            elapsedTime += Time.deltaTime * snapSpeed;
+            float t = Mathf.SmoothStep(0f, 1f, elapsedTime);
+
+            transform.position = Vector3.Lerp(startPosition, originalPosition, t);
+            transform.rotation = Quaternion.Slerp(startRotation, originalRotation, t);
+
+            yield return null;
+        }
+
+        transform.position = originalPosition;
+        transform.rotation = originalRotation;
+        meshRenderer.material.color = correctPositionColor;
+        GameManager.Instance.CheckPartPlacement(this);
+    }
+
+    public bool IsInCorrectPosition()
+    {
+        return isSnapped;
+    }
+
+    public void RandomizeTransform()
+    {
+        isSnapped = false;
+        isSelected = false;
+        float radius = 5f;
+        float angle = Random.Range(0f, 360f) * Mathf.Deg2Rad;
+        float x = Mathf.Cos(angle) * radius;
+        float z = Mathf.Sin(angle) * radius;
+
+        transform.position = new Vector3(x, 0f, z);
+        transform.rotation = Random.rotation;
+
+        if (meshRenderer != null)
+        {
+            meshRenderer.material.color = Color.white;
+        }
+    }
+
+    public int GetPartIndex()
+    {
+        return partIndex;
+    }
+}

@@ -1,0 +1,94 @@
+using UnityEngine;
+using System.Collections.Generic;
+
+public class Grabber : MonoBehaviour
+{
+    private PuzzlePiece selectedPiece;
+    private Vector3 grabOffset;
+    private HashSet<PuzzlePiece> movingGroup = new HashSet<PuzzlePiece>();
+
+    private void Update()
+    {
+        if (Input.GetMouseButtonDown(0))
+        {
+            if (selectedPiece == null)
+            {
+                RaycastHit hit = CastRay();
+
+                if (hit.collider != null && hit.collider.CompareTag("attachable"))
+                {
+                    var piece = hit.collider.GetComponent<PuzzlePiece>();
+                    if (piece != null)
+                    {
+                        selectedPiece = piece;
+                        movingGroup = piece.GetAllConnectedPieces();
+                        
+                        // Calculate offset from mouse to piece position
+                        Vector3 mouseWorldPos = GetMouseWorldPosition();
+                        grabOffset = selectedPiece.transform.position - mouseWorldPos;
+                    }
+                }
+            }
+            else
+            {
+                selectedPiece = null;
+                movingGroup.Clear();
+            }
+        }
+
+        if (selectedPiece != null)
+        {
+            // Move the entire group together
+            Vector3 targetPosition = GetMouseWorldPosition() + grabOffset;
+            Vector3 movement = targetPosition - selectedPiece.transform.position;
+
+            foreach (var piece in movingGroup)
+            {
+                piece.transform.position += movement;
+            }
+
+            // Handle rotation
+            if (Input.GetMouseButtonDown(1))
+            {
+                Vector3 rotationCenter = selectedPiece.transform.position;
+                foreach (var piece in movingGroup)
+                {
+                    // Rotate around the selected piece
+                    piece.transform.RotateAround(rotationCenter, Vector3.up, 90f);
+                }
+            }
+
+            // Check for connections with other pieces
+            foreach (var piece in Object.FindObjectsByType<PuzzlePiece>(FindObjectsSortMode.None))
+            {
+                if (!movingGroup.Contains(piece))
+                {
+                    foreach (var movingPiece in movingGroup)
+                    {
+                        if (movingPiece.IsCompatibleAndNearby(piece, out Transform thisSnapPoint, out Transform otherSnapPoint))
+                        {
+                            movingPiece.SnapTo(piece, thisSnapPoint, otherSnapPoint);
+                            // Update the moving group to include the newly connected pieces
+                            movingGroup = selectedPiece.GetAllConnectedPieces();
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private Vector3 GetMouseWorldPosition()
+    {
+        Vector3 mousePosition = Input.mousePosition;
+        mousePosition.z = Camera.main.WorldToScreenPoint(selectedPiece.transform.position).z;
+        return Camera.main.ScreenToWorldPoint(mousePosition);
+    }
+
+    private RaycastHit CastRay()
+    {
+        Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
+        Physics.Raycast(ray, out RaycastHit hit);
+        return hit;
+    }
+}

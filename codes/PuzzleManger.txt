@@ -1,0 +1,245 @@
+using UnityEngine;
+using UnityEngine.UI;
+using System.Linq;
+using System.Collections.Generic;
+using UnityEngine.SceneManagement;
+
+public class PuzzleManager : MonoBehaviour 
+{
+    private PuzzlePiece[] pieces;
+    
+    [Header("UI Elements")]
+    public GameObject puzzleSolvedUI;
+    public GameObject gameOverUI;
+    public Text timerText;
+    public Text completionMessageText;
+    public Button startButton;
+    public Button retryButton;
+    
+    [Header("Game Settings")]
+    [SerializeField] private float gameDuration = 60f; // Time limit in seconds
+    [SerializeField] private int requiredConnections = 5;
+    
+    // Game state
+    private bool gameStarted = false;
+    private bool puzzleComplete = false;
+    private float timeRemaining;
+    
+    // For debugging
+    [SerializeField] private Text connectionCounterText;
+
+    [System.Obsolete]
+    private void Start()
+    {
+        InitializeGame();
+    }
+
+    [System.Obsolete]
+    private void InitializeGame()
+    {
+        // Find all puzzle pieces
+        pieces = FindObjectsOfType<PuzzlePiece>();
+        
+        // Disable piece interaction until game starts
+        SetPiecesInteractable(false);
+        
+        // Initialize UI
+        if (puzzleSolvedUI != null) puzzleSolvedUI.SetActive(false);
+        if (gameOverUI != null) gameOverUI.SetActive(false);
+        if (retryButton != null)
+        {
+            retryButton.onClick.RemoveAllListeners();
+            retryButton.onClick.AddListener(RestartGame);
+            retryButton.gameObject.SetActive(false);
+        }
+        if (startButton != null)
+        {
+            startButton.onClick.RemoveAllListeners();
+            startButton.onClick.AddListener(StartGame);
+            startButton.gameObject.SetActive(true);
+        }
+        
+        // Initialize timer
+        timeRemaining = gameDuration;
+        UpdateTimerDisplay();
+        
+        // Reset game state
+        gameStarted = false;
+        puzzleComplete = false;
+        
+        // Initialize connection counter
+        UpdateConnectionCounter(0);
+    }
+
+    private void Update()
+    {
+        if (gameStarted && !puzzleComplete)
+        {
+            UpdateTimer();
+            CheckConnections();
+        }
+    }
+
+    private void UpdateTimer()
+    {
+        if (timeRemaining > 0)
+        {
+            timeRemaining -= Time.deltaTime;
+            UpdateTimerDisplay();
+            
+            // Check for time running out
+            if (timeRemaining <= 0)
+            {
+                timeRemaining = 0;
+                GameOver();
+            }
+        }
+    }
+
+    private void UpdateTimerDisplay()
+    {
+        if (timerText != null)
+        {
+            int minutes = Mathf.FloorToInt(timeRemaining / 60);
+            int seconds = Mathf.FloorToInt(timeRemaining % 60);
+            timerText.text = string.Format("{0:00}:{1:00}", minutes, seconds);
+        }
+    }
+
+    private void StartGame()
+    {
+        gameStarted = true;
+        timeRemaining = gameDuration;
+        
+        // Enable piece interaction
+        SetPiecesInteractable(true);
+        
+        // Hide start button
+        if (startButton != null)
+        {
+            startButton.gameObject.SetActive(false);
+        }
+        
+        // Randomize pieces position
+        foreach (var piece in pieces)
+        {
+            piece.RandomizePositionAndRotation();
+        }
+    }
+
+    private void GameOver()
+    {
+        gameStarted = false;
+        SetPiecesInteractable(false);
+        
+        if (gameOverUI != null)
+        {
+            gameOverUI.SetActive(true);
+        }
+        
+        ShowRetryButton();
+    }
+
+    private void CheckConnections()
+    {
+        int totalConnections = CountTotalConnections();
+        UpdateConnectionCounter(totalConnections);
+        
+        if (totalConnections >= requiredConnections && !puzzleComplete)
+        {
+            PuzzleComplete();
+        }
+    }
+
+    private int CountTotalConnections()
+    {
+        HashSet<(PuzzlePiece, PuzzlePiece)> uniqueConnections = new HashSet<(PuzzlePiece, PuzzlePiece)>();
+        
+        foreach (var piece in pieces)
+        {
+            foreach (var connectedPiece in piece.GetAttachedPieces())
+            {
+                var connection = piece.GetInstanceID() < connectedPiece.GetInstanceID() 
+                    ? (piece, connectedPiece) 
+                    : (connectedPiece, piece);
+                    
+                uniqueConnections.Add(connection);
+            }
+        }
+        
+        return uniqueConnections.Count;
+    }
+
+    private void UpdateConnectionCounter(int connectionCount)
+    {
+        if (connectionCounterText != null)
+        {
+            connectionCounterText.text = $"Connections: {connectionCount} / {requiredConnections}";
+        }
+    }
+
+    private void PuzzleComplete()
+    {
+        puzzleComplete = true;
+        gameStarted = false;
+        SetPiecesInteractable(false);
+        
+        if (puzzleSolvedUI != null)
+        {
+            puzzleSolvedUI.SetActive(true);
+            StartCoroutine(AnimateCompletionMessage());
+        }
+        
+        ShowRetryButton();
+    }
+
+    private void ShowRetryButton()
+    {
+        if (retryButton != null)
+        {
+            retryButton.gameObject.SetActive(true);
+        }
+    }
+
+    private void SetPiecesInteractable(bool interactable)
+    {
+        foreach (var piece in pieces)
+        {
+            var collider = piece.GetComponent<Collider>();
+            if (collider != null)
+            {
+                collider.enabled = interactable;
+            }
+        }
+    }
+
+    private void RestartGame()
+    {
+        // Reload the current scene
+        SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
+    }
+
+    private System.Collections.IEnumerator AnimateCompletionMessage()
+    {
+        if (completionMessageText == null) yield break;
+
+        Vector3 originalScale = completionMessageText.transform.localScale;
+        completionMessageText.transform.localScale = Vector3.zero;
+        
+        float duration = 1.0f;
+        float elapsedTime = 0;
+
+        while (elapsedTime < duration)
+        {
+            elapsedTime += Time.deltaTime;
+            float progress = elapsedTime / duration;
+            
+            float smoothProgress = Mathf.SmoothStep(0, 1, progress);
+            completionMessageText.transform.localScale = Vector3.Lerp(Vector3.zero, originalScale, smoothProgress);
+            
+            yield return null;
+        }
+
+        completionMessageText.transform.localScale = originalScale;
+    }
+}

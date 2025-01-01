@@ -1,0 +1,13 @@
+# Blender 3.3.21 MTL File: 'untitled.blend'
+# www.blender.org
+
+newmtl Material.011
+Ns 684.380127
+Ka 1.000000 1.000000 1.000000
+Ks 0.095455 0.095455 0.095455
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+illum 2
+map_Kd C:/Users/ziadn/Downloads/human-liver-and-gallbladder/source/Liver project - Copy/Liver project - Copy/liver texture combined darker for lowres.png
+map_d C:/Users/ziadn/Downloads/human-liver-and-gallbladder/source/Liver project - Copy/Liver project - Copy/liver texture combined darker for lowres.png
+map_Bump -bm 1.000000 C:/Users/ziadn/Downloads/human-liver-and-gallbladder/source/Liver project - Copy/Liver project - Copy/normal map liver.png
