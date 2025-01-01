@@ -36,7 +36,7 @@
 • Hardware: A system capable of running Unity, recommended with at least 8GB of RAM and a graphics card that supports Unity’s requirements.
 
 •  For Installation Instructions:
-[Installation Instructions.txt](https://github.com/user-attachments/files/18285826/installation-instructions.txt) 
+[Installation Instructions.txt](https://github.com/ziad0nassif/3d-anatomy-organs-puzzle/blob/0a74d16e3f5b9cb0cdc2d5250b669f3601052030/installation-instructions.txt) 
 
 
 
