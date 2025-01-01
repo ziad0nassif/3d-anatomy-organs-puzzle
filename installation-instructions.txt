@@ -1,0 +1,18 @@
+Installation Instructions
+
+
+• Install Unity:
+Download and install Unity Hub from the Unity website. -->
+Open Unity Hub and click on the Installs tab. -->
+Add a new version of Unity by clicking the Add button and selecting the version. -->
+Follow the installation prompts, ensuring you select necessary modules like Visual Studio for code editing. -->
+Once installed, open Unity Hub and create a new project using the 3D template. -->
+
+• Install Blender (Optional for Model Export)
+Download and install Blender from the Blender website. -->
+Use Blender to create the 3D liver model and export it as a .fbx file, which can be imported into Unity. -->
+
+• Import the Project into Unity
+Open Unity Hub and click Add to open your project. -->
+Browse to the folder containing your Unity project and open it. -->
+Once the project is loaded, you should see all the game assets, scripts, and models in the Unity editor. -->
